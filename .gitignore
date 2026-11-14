@@ -13,3 +13,4 @@ dist/
 .pgdata/
 
 .DS_Store
+.claude/
