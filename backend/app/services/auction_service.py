@@ -1,10 +1,3 @@
-"""The auction engine: bid validation, ranking, extensions and closing.
-
-Every function that changes an auction runs inside one database transaction with
-the RFQ row locked (SELECT ... FOR UPDATE), so two bids on the same auction are
-processed strictly one after the other.
-"""
-
 from datetime import datetime, timedelta
 
 from sqlalchemy import func, select
@@ -34,10 +27,8 @@ def get_auction_status(rfq: Rfq, now: datetime) -> AuctionStatus:
 
 
 def compute_ranking(db: Session, rfq_id: int) -> list[Bid]:
-    """Each supplier's current (latest) bid, ordered so index 0 is L1.
-
-    Ties on total amount go to whoever submitted that price first.
-    """
+    # Each supplier's latest bid, L1 first. Equal totals go to whoever
+    # submitted that price first.
     latest_bid_ids = (
         select(func.max(Bid.id))
         .where(Bid.rfq_id == rfq_id)
@@ -57,14 +48,11 @@ def ranks_by_supplier(ranking: list[Bid]) -> dict[int, int]:
 
 
 def submit_bid(db: Session, rfq_id: int, data: BidCreate) -> tuple[Bid, int, bool]:
-    """Validate and store a bid, then apply the auction's extension rule.
-
-    Returns (bid, supplier's new rank, whether the auction was extended).
-    """
-    # Lock the RFQ row until commit. A concurrent bid on the same RFQ waits here,
-    # so it sees the ranking and close time this bid leaves behind.
-    # populate_existing makes SQLAlchemy overwrite any copy of the RFQ already in
-    # this session with the row we just locked, so we never act on stale data.
+    # Returns (bid, supplier's new rank, whether the auction was extended).
+    #
+    # The RFQ row stays locked until commit, so a concurrent bid on the same RFQ
+    # waits here and then sees the ranking and close time this bid leaves behind.
+    # populate_existing replaces any stale copy of the RFQ cached in the session.
     rfq = db.scalar(
         select(Rfq)
         .where(Rfq.id == rfq_id)
@@ -142,11 +130,8 @@ def submit_bid(db: Session, rfq_id: int, data: BidCreate) -> tuple[Bid, int, boo
 
 
 def close_expired_auctions(db: Session) -> int:
-    """Record the closing event for auctions whose close time has passed.
-
-    Bid acceptance never depends on this; it only keeps the activity log complete.
-    Returns how many auctions were closed.
-    """
+    # Only writes the closing entry to the activity log. Bid acceptance is
+    # decided from timestamps and never depends on this having run.
     now = clock.utc_now()
     # SKIP LOCKED: if a bid is mid-transaction on an RFQ, skip it this round
     # rather than wait. The bid may even extend it, so we re-check next round.
@@ -179,11 +164,12 @@ def close_expired_auctions(db: Session) -> int:
 def _check_auction_open(rfq: Rfq, now: datetime) -> None:
     if now < rfq.bid_start_time:
         raise BusinessRuleError("Auction has not started yet")
-    # current_close_time can never exceed forced_close_time, so the first check
-    # is a safety net; it also gives the clearer message once the hard limit passes.
-    if now >= rfq.forced_close_time:
-        raise BusinessRuleError("Auction has been force closed")
-    if now >= rfq.current_close_time:
+    # current_close_time can never exceed forced_close_time, so the forced check
+    # is only a safety net. The message follows the auction's status, so an auction
+    # that closed normally isn't reported as force closed later on.
+    if now >= rfq.current_close_time or now >= rfq.forced_close_time:
+        if get_auction_status(rfq, now) == AuctionStatus.FORCE_CLOSED:
+            raise BusinessRuleError("Auction has been force closed")
         raise BusinessRuleError("Auction is closed")
 
 
@@ -209,7 +195,7 @@ def _apply_extension(
         return False
 
     if previous_close >= rfq.forced_close_time:
-        return False  # already at the hard limit; nothing left to extend
+        return False
 
     new_close = min(
         previous_close + timedelta(minutes=rfq.extension_minutes),

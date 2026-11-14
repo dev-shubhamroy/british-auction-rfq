@@ -86,7 +86,7 @@ def test_bid_exactly_at_start_is_accepted(db, fake_clock):
     submit_bid(db, rfq_id, bid(ALPHA, "1000"))
 
 
-@pytest.mark.parametrize("hour, minute, second", [(18, 0, 0), (18, 0, 1), (18, 20, 0)])
+@pytest.mark.parametrize("hour, minute, second", [(18, 0, 0), (18, 0, 1), (18, 20, 0), (18, 45, 0)])
 def test_bid_at_or_after_close_is_rejected(client, db, fake_clock, hour, minute, second):
     rfq_id = make_auction(db)
     fake_clock.set(hour, minute, second)
