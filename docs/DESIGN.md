@@ -134,6 +134,8 @@ erDiagram
         int rfq_id FK
         string event_type
         text message
+        timestamptz previous_close_time "extensions only"
+        timestamptz new_close_time "extensions only"
         timestamptz created_at
     }
 ```
@@ -149,7 +151,12 @@ Notes:
   bid" are simple `ORDER BY` / `MIN` queries. It is always set in one place
   (`submit_bid`).
 - Money uses `NUMERIC(12, 2)` to avoid floating-point rounding.
-- All timestamps are `timestamptz` and written in UTC.
+- All timestamps are `timestamptz` and written in UTC; each DB connection is set to
+  `timezone=utc` so values are also read back as UTC.
+- `trigger_type` and `event_type` are VARCHAR columns with CHECK constraints listing
+  the allowed values.
+- Extension log rows store `previous_close_time` / `new_close_time` so the UI can
+  render the change in the viewer's local timezone.
 
 Indexes:
 
@@ -315,7 +322,9 @@ Worked example (X = 10, Y = 5, trigger = L1 change, forced close 18:12):
 - **Concurrency:** the RFQ row is locked with `SELECT ... FOR UPDATE` for the whole bid
   transaction. Two bids on the same auction run one after the other; bids on different
   auctions do not block each other. `now` is read after the lock is acquired, so a bid
-  that waited for the lock is judged against the time it actually got processed.
+  that waited for the lock is judged against the time it actually got processed. The
+  locking query uses SQLAlchemy's `populate_existing` so a copy of the RFQ cached in the
+  session is overwritten by the freshly locked row.
 - **Closing events** are written by a background loop every 5 seconds, using the close
   time as the event timestamp. If the API is down at close time the event is written
   on the next start; bid acceptance is unaffected because it never relies on the

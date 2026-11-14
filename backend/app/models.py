@@ -66,7 +66,7 @@ class Rfq(Base):
     trigger_window_minutes: Mapped[int | None] = mapped_column(Integer)  # X
     extension_minutes: Mapped[int | None] = mapped_column(Integer)  # Y
     trigger_type: Mapped[TriggerType | None] = mapped_column(
-        Enum(TriggerType, native_enum=False, length=20)
+        Enum(TriggerType, native_enum=False, create_constraint=True, length=20)
     )
 
     # Set by the background closer once the auction has ended and the closing
@@ -113,7 +113,7 @@ class ActivityLog(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     rfq_id: Mapped[int] = mapped_column(ForeignKey("rfqs.id", ondelete="CASCADE"), index=True)
-    event_type: Mapped[EventType] = mapped_column(Enum(EventType, native_enum=False, length=30))
+    event_type: Mapped[EventType] = mapped_column(Enum(EventType, native_enum=False, create_constraint=True, length=30))
     message: Mapped[str] = mapped_column(Text)
     # Only filled for AUCTION_EXTENDED, so the UI can show the change in local time.
     previous_close_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
