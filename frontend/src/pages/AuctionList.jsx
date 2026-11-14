@@ -63,7 +63,7 @@ export default function AuctionList() {
             {rfqs?.map((rfq) => (
               <tr key={rfq.id} className="hover:bg-slate-50">
                 <td className="whitespace-nowrap px-4 py-2.5 font-mono text-xs">{rfq.reference_id}</td>
-                <td className="px-4 py-2.5">{rfq.name}</td>
+                <td className="min-w-56 px-4 py-2.5">{rfq.name}</td>
                 <td className="whitespace-nowrap px-4 py-2.5 text-right">{formatMoney(rfq.lowest_bid)}</td>
                 <td className="px-4 py-2.5 text-right">{rfq.bid_count}</td>
                 <td className="whitespace-nowrap px-4 py-2.5">
