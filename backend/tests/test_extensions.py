@@ -26,8 +26,6 @@ def extension_logs(db, rfq_id):
     ).all()
 
 
-# ---------- trigger window ----------
-
 def test_bid_outside_window_does_not_extend(db, fake_clock):
     rfq_id = make_auction(db, TriggerType.BID_RECEIVED)
     fake_clock.set(17, 49, 59)
@@ -48,8 +46,6 @@ def test_bid_at_window_start_extends(db, fake_clock):
     assert close_time(db, rfq_id) == at(18, 5)
 
 
-# ---------- trigger a) bid received ----------
-
 def test_bid_received_trigger(db, fake_clock):
     rfq_id = make_auction(db, TriggerType.BID_RECEIVED)
     fake_clock.set(17, 30)
@@ -64,8 +60,6 @@ def test_bid_received_trigger(db, fake_clock):
     assert log.previous_close_time == at(18, 0)
     assert log.new_close_time == at(18, 5)
 
-
-# ---------- trigger b) any rank change ----------
 
 def test_any_rank_change_trigger(db, fake_clock):
     rfq_id = make_auction(db, TriggerType.ANY_RANK_CHANGE)
@@ -97,8 +91,6 @@ def test_any_rank_change_counts_new_supplier_below_l1(db, fake_clock):
 
     assert (rank, extended) == (2, True)
 
-
-# ---------- trigger c) L1 change ----------
 
 def test_l1_change_trigger(db, fake_clock):
     rfq_id = make_auction(db, TriggerType.L1_CHANGE)
@@ -132,8 +124,6 @@ def test_l1_improving_own_price_does_not_extend(db, fake_clock):
     assert extended is False
 
 
-# ---------- repeated extensions ----------
-
 def test_repeated_extensions_use_current_close_time(db, fake_clock):
     rfq_id = make_auction(db, TriggerType.BID_RECEIVED)
 
@@ -159,8 +149,6 @@ def test_extension_is_measured_from_close_time_not_bid_time(db, fake_clock):
     submit_bid(db, rfq_id, bid(ALPHA, "1000"))
     assert close_time(db, rfq_id) == at(18, 5)  # 18:00 + 5, not 17:51 + 5
 
-
-# ---------- forced close ----------
 
 def test_extension_never_exceeds_forced_close(db, fake_clock):
     rfq_id = make_auction(db, TriggerType.BID_RECEIVED, forced_close=at(18, 8))

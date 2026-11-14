@@ -8,7 +8,6 @@ export function formatMoney(value) {
   return value === null || value === undefined ? '—' : money.format(Number(value))
 }
 
-// Backend sends UTC ISO strings; the browser shows them in the user's local time.
 export function formatDateTime(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleString(undefined, {
@@ -46,7 +45,7 @@ export function formatCountdown(ms) {
   return days > 0 ? `${days}d ${hms}` : hms
 }
 
-// <input type="datetime-local"> works in local time without a timezone.
+// datetime-local inputs have no timezone; treat them as the browser's local time.
 export function localInputToUtcIso(value) {
   return new Date(value).toISOString()
 }

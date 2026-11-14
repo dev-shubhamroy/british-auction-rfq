@@ -9,8 +9,12 @@ __pycache__/
 node_modules/
 dist/
 
-# Local Postgres data directory (see README)
+# Local Postgres data directory
 .pgdata/
+
+# Personal notes, kept out of the repo
+docs/INTERVIEW_PREPARATION.md
+notes/
 
 .DS_Store
 .claude/

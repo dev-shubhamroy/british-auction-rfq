@@ -5,8 +5,6 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validato
 
 from app.models import AuctionStatus, EventType, TriggerType
 
-# ---------- requests ----------
-
 
 class RfqCreate(BaseModel):
     reference_id: str = Field(min_length=1, max_length=50)
@@ -66,9 +64,6 @@ class BidCreate(BaseModel):
     @property
     def total_amount(self) -> Decimal:
         return self.freight_charges + self.origin_charges + self.destination_charges
-
-
-# ---------- responses ----------
 
 
 class SupplierOut(BaseModel):
@@ -140,7 +135,7 @@ class BidOut(BaseModel):
 
 
 class RankingRow(BidOut):
-    rank: int  # 1 = L1
+    rank: int
 
 
 class ActivityLogOut(BaseModel):

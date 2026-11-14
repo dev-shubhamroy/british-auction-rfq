@@ -1,5 +1,4 @@
-"""Concurrent bids on the same auction, each in its own session/connection,
-just like two simultaneous HTTP requests."""
+# Each worker uses its own session/connection, like two simultaneous requests.
 
 import threading
 import time
@@ -14,7 +13,6 @@ from tests.conftest import ALPHA, BRAVO, T0, bid, make_auction
 
 
 def run_concurrently(rfq_id, bids):
-    """Submit all bids at the same moment from separate threads."""
     barrier = threading.Barrier(len(bids))
     results = [None] * len(bids)
 

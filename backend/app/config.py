@@ -8,7 +8,6 @@ class Settings(BaseSettings):
     test_database_url: str = "postgresql+psycopg://postgres@localhost:5432/rfq_auction_test"
     cors_origins: str = "http://localhost:5173"
 
-    # How often the background loop records "auction closed" events.
     closer_interval_seconds: int = 5
 
 
