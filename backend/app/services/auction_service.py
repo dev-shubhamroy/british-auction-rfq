@@ -63,7 +63,14 @@ def submit_bid(db: Session, rfq_id: int, data: BidCreate) -> tuple[Bid, int, boo
     """
     # Lock the RFQ row until commit. A concurrent bid on the same RFQ waits here,
     # so it sees the ranking and close time this bid leaves behind.
-    rfq = db.scalar(select(Rfq).where(Rfq.id == rfq_id).with_for_update())
+    # populate_existing makes SQLAlchemy overwrite any copy of the RFQ already in
+    # this session with the row we just locked, so we never act on stale data.
+    rfq = db.scalar(
+        select(Rfq)
+        .where(Rfq.id == rfq_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
     if rfq is None:
         raise NotFoundError("RFQ not found")
 
@@ -147,6 +154,7 @@ def close_expired_auctions(db: Session) -> int:
         select(Rfq)
         .where(Rfq.closed_at.is_(None), Rfq.current_close_time <= now)
         .with_for_update(skip_locked=True)
+        .execution_options(populate_existing=True)
     ).all()
 
     for rfq in expired:
