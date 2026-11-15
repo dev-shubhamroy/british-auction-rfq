@@ -1,3 +1,5 @@
+import logging
+
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -16,6 +18,8 @@ from app.schemas import (
     RfqOut,
 )
 from app.services.auction_service import compute_ranking, get_auction_status
+
+logger = logging.getLogger(__name__)
 
 TRIGGER_LABELS = {
     TriggerType.BID_RECEIVED: "bid received",
@@ -51,6 +55,7 @@ def create_rfq(db: Session, data: RfqCreate) -> Rfq:
     db.add(ActivityLog(rfq_id=rfq.id, event_type=EventType.RFQ_CREATED,
                        message=f"RFQ created. {config}", created_at=now))
     db.commit()
+    logger.info("RFQ %s created (id %d)", rfq.reference_id, rfq.id)
     return rfq
 
 

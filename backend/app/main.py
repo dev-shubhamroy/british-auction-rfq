@@ -12,14 +12,14 @@ from app.errors import BusinessRuleError, ConflictError, NotFoundError
 from app.routes import rfqs, suppliers
 from app.services.auction_service import close_expired_auctions
 
+# Without this the root logger stays at WARNING and every logger.info call is dropped.
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
 def close_auctions_once() -> None:
     with SessionLocal() as db:
-        closed = close_expired_auctions(db)
-        if closed:
-            logger.info("Closed %d auction(s)", closed)
+        close_expired_auctions(db)
 
 
 async def run_closer_loop() -> None:
@@ -53,16 +53,21 @@ app.include_router(rfqs.router)
 app.include_router(suppliers.router)
 
 
+def rejected(request: Request, status_code: int, exc: Exception) -> JSONResponse:
+    logger.info("%s %s rejected (%d): %s", request.method, request.url.path, status_code, exc)
+    return JSONResponse(status_code=status_code, content={"detail": str(exc)})
+
+
 @app.exception_handler(NotFoundError)
 def handle_not_found(request: Request, exc: NotFoundError):
-    return JSONResponse(status_code=404, content={"detail": str(exc)})
+    return rejected(request, 404, exc)
 
 
 @app.exception_handler(ConflictError)
 def handle_conflict(request: Request, exc: ConflictError):
-    return JSONResponse(status_code=409, content={"detail": str(exc)})
+    return rejected(request, 409, exc)
 
 
 @app.exception_handler(BusinessRuleError)
 def handle_business_rule(request: Request, exc: BusinessRuleError):
-    return JSONResponse(status_code=400, content={"detail": str(exc)})
+    return rejected(request, 400, exc)

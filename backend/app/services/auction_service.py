@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 
 from sqlalchemy import func, select
@@ -7,6 +8,8 @@ from app import clock
 from app.errors import BusinessRuleError, NotFoundError
 from app.models import ActivityLog, AuctionStatus, Bid, EventType, Rfq, Supplier, TriggerType
 from app.schemas import BidCreate
+
+logger = logging.getLogger(__name__)
 
 TRIGGER_REASONS = {
     TriggerType.BID_RECEIVED: "Bid received",
@@ -130,6 +133,11 @@ def submit_bid(db: Session, rfq_id: int, data: BidCreate) -> tuple[Bid, int, boo
     extended = _apply_extension(db, rfq, now, rank_changed, l1_changed)
 
     db.commit()
+    logger.info(
+        "RFQ %s: bid %d from %s, total %s, now L%d%s",
+        rfq.reference_id, bid.id, supplier.name, total, new_rank,
+        f", close extended to {rfq.current_close_time.isoformat()}" if extended else "",
+    )
     return bid, new_rank, extended
 
 
@@ -162,6 +170,8 @@ def close_expired_auctions(db: Session) -> int:
                  f"Auction closed. {result}")
 
     db.commit()
+    for rfq in expired:
+        logger.info("RFQ %s closed at %s", rfq.reference_id, rfq.closed_at.isoformat())
     return len(expired)
 
 
