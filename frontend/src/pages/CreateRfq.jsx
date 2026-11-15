@@ -39,6 +39,9 @@ function validate(form) {
   if (close <= start) return 'Bid close time must be after bid start time.'
   if (forced <= close) return 'Forced close time must be after bid close time.'
   if (close <= new Date()) return 'Bid close time must be in the future.'
+  if (form.pickup_date < form.bid_close_time.slice(0, 10)) {
+    return 'Pickup / service date cannot be before the bid close date.'
+  }
   return ''
 }
 

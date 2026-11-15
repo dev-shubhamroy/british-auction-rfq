@@ -106,7 +106,7 @@ export default function AuctionDetails() {
 
         <div className="min-w-0 space-y-4">
           <Card title="Submit a bid">
-            <BidForm rfqId={rfq.id} isOpen={status === 'ACTIVE'} onSubmitted={load} />
+            <BidForm rfqId={rfq.id} pickupDate={rfq.pickup_date} isOpen={status === 'ACTIVE'} onSubmitted={load} />
           </Card>
           <Card title="RFQ & auction configuration">
             <dl className="space-y-2 text-sm">

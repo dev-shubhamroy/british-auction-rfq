@@ -13,7 +13,7 @@ const EMPTY_FORM = {
   quote_validity_date: '',
 }
 
-export default function BidForm({ rfqId, isOpen, onSubmitted }) {
+export default function BidForm({ rfqId, pickupDate, isOpen, onSubmitted }) {
   const [suppliers, setSuppliers] = useState([])
   const [form, setForm] = useState(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
@@ -88,7 +88,7 @@ export default function BidForm({ rfqId, isOpen, onSubmitted }) {
           <input required type="number" min="1" step="1" value={form.transit_time_days} onChange={update('transit_time_days')} className={inputClass} />
         </Field>
         <Field label="Quote valid until">
-          <input required type="date" value={form.quote_validity_date} onChange={update('quote_validity_date')} className={inputClass} />
+          <input required type="date" min={pickupDate} value={form.quote_validity_date} onChange={update('quote_validity_date')} className={inputClass} />
         </Field>
       </div>
 

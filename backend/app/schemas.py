@@ -1,9 +1,12 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 from app.models import AuctionStatus, EventType, TriggerType
+
+# Largest value a NUMERIC(12, 2) column can hold.
+MAX_AMOUNT = Decimal("9999999999.99")
 
 
 class RfqCreate(BaseModel):
@@ -32,6 +35,9 @@ class RfqCreate(BaseModel):
             raise ValueError("Bid close time must be after bid start time")
         if self.forced_close_time <= self.bid_close_time:
             raise ValueError("Forced close time must be after bid close time")
+        # Compared with the close date in UTC, since that's how times are stored.
+        if self.pickup_date < self.bid_close_time.astimezone(timezone.utc).date():
+            raise ValueError("Pickup / service date cannot be before the bid close date")
 
         if self.british_auction_enabled:
             if self.trigger_window_minutes is None or self.extension_minutes is None:
@@ -55,10 +61,13 @@ class BidCreate(BaseModel):
     quote_validity_date: date
 
     @model_validator(mode="after")
-    def strip_carrier(self):
+    def check_carrier_and_total(self):
         self.carrier_name = self.carrier_name.strip()
         if not self.carrier_name:
             raise ValueError("Carrier name is required")
+        # Each charge fits the column on its own, but their sum might not.
+        if self.total_amount > MAX_AMOUNT:
+            raise ValueError(f"Total quote cannot exceed {MAX_AMOUNT:,}")
         return self
 
     @property

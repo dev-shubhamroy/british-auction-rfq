@@ -72,6 +72,10 @@ def submit_bid(db: Session, rfq_id: int, data: BidCreate) -> tuple[Bid, int, boo
         raise BusinessRuleError("Supplier not found")
     if data.quote_validity_date < now.date():
         raise BusinessRuleError("Quote validity date cannot be in the past")
+    if data.quote_validity_date < rfq.pickup_date:
+        raise BusinessRuleError(
+            f"Quote must be valid until at least the pickup date ({rfq.pickup_date:%d %b %Y})"
+        )
 
     total = data.total_amount
     previous_bid = _latest_bid_of_supplier(db, rfq.id, supplier.id)

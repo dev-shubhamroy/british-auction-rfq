@@ -161,3 +161,31 @@ def test_tie_goes_to_earlier_bid(db, rfq_id, fake_clock):
     fake_clock.set(17, 12)
     submit_bid(db, rfq_id, bid(ALPHA, "900"))
     assert [b.supplier_id for b in compute_ranking(db, rfq_id)] == [BRAVO, ALPHA]
+
+
+def test_total_larger_than_the_column_is_rejected(client, rfq_id):
+    # Each charge fits NUMERIC(12,2) on its own, but the sum would not.
+    payload = {
+        **VALID_BID,
+        "freight_charges": "9999999999.99",
+        "origin_charges": "9999999999.99",
+        "destination_charges": "9999999999.99",
+    }
+    response = client.post(f"/api/rfqs/{rfq_id}/bids", json=payload)
+    assert response.status_code == 422
+    assert "Total quote cannot exceed" in response.text
+
+
+def test_largest_total_that_fits_is_accepted(client, rfq_id):
+    payload = {**VALID_BID, "freight_charges": "9999999999.00", "origin_charges": "0.99", "destination_charges": "0"}
+    assert client.post(f"/api/rfqs/{rfq_id}/bids", json=payload).status_code == 201
+
+
+def test_quote_must_be_valid_until_pickup_date(client, rfq_id):
+    # Default RFQ pickup date is 2026-03-20.
+    response = client.post(f"/api/rfqs/{rfq_id}/bids", json={**VALID_BID, "quote_validity_date": "2026-03-19"})
+    assert response.status_code == 400
+    assert "pickup" in response.json()["detail"]
+
+    response = client.post(f"/api/rfqs/{rfq_id}/bids", json={**VALID_BID, "quote_validity_date": "2026-03-20"})
+    assert response.status_code == 201

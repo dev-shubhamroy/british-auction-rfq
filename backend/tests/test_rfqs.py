@@ -106,3 +106,12 @@ def test_closer_logs_closing_event_once(db, fake_clock):
 
 def test_unknown_rfq_returns_404(client):
     assert client.get("/api/rfqs/999").status_code == 404
+
+
+def test_pickup_date_before_bid_close_is_rejected(client):
+    # Bid close is 2026-03-10 18:00 UTC.
+    response = client.post("/api/rfqs", json=rfq_payload(pickup_date="2026-03-09"))
+    assert response.status_code == 422
+    assert "Pickup" in response.text
+
+    assert client.post("/api/rfqs", json=rfq_payload(pickup_date="2026-03-10")).status_code == 201
