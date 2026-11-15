@@ -52,6 +52,11 @@ log, which a small asyncio loop in the API process does every 5 seconds.
 
 ## Database schema
 
+PostgreSQL fits because the data is relational (RFQs, suppliers and bids linked by
+foreign keys) and the bid flow needs real transactions and row-level locking
+(`SELECT ... FOR UPDATE`) to keep concurrent bids consistent. It also has exact
+`NUMERIC` money and `timestamptz`.
+
 ```mermaid
 erDiagram
     RFQS ||--o{ BIDS : receives
@@ -73,6 +78,7 @@ erDiagram
         string trigger_type "BID_RECEIVED | ANY_RANK_CHANGE | L1_CHANGE"
         timestamptz closed_at "set once the close is logged"
         timestamptz created_at
+        timestamptz updated_at
     }
     SUPPLIERS {
         int id PK
@@ -111,8 +117,11 @@ erDiagram
 - Money is `NUMERIC(12,2)`. Timestamps are `timestamptz` in UTC; each connection is set
   to `timezone=utc`.
 - `trigger_type` and `event_type` have CHECK constraints for the allowed values.
-- Indexes: unique `rfqs.reference_id` and `suppliers.name`, `bids(rfq_id, supplier_id)`,
-  `activity_logs.rfq_id`, `rfqs.closed_at`.
+- Indexes: unique `rfqs.reference_id` and `suppliers.name`, `bids(rfq_id, supplier_id)`
+  for a supplier's previous bid, `bids(rfq_id, total_amount, created_at)` for ranking,
+  bid history and the lowest bid per RFQ, `activity_logs.rfq_id`, `rfqs.closed_at`.
+- The schema is managed with Alembic migrations (`backend/migrations`). The tests build
+  their database from the migrations and fail if a model has no matching migration.
 - Auction status is not stored (see below).
 
 ## API
@@ -189,7 +198,10 @@ Example with X = 10, Y = 5, trigger = L1 change, close 18:00, forced close 18:12
 - A new bid must be strictly lower than the supplier's own previous bid, but does not
   have to beat L1. This also rejects accidental duplicate submissions.
 - Freight must be greater than 0; origin and destination charges can be 0. Transit time
-  is at least 1 day.
+  is at least 1 day. The total must fit the `NUMERIC(12,2)` column (at most
+  9,999,999,999.99).
+- The pickup date cannot be before the bid close date (compared in UTC), and a quote
+  must be valid until at least the pickup date.
 - A supplier's first bid counts as a rank change, and the first bid of an auction counts
   as an L1 change.
 - A bid at exactly the close time is rejected.
@@ -198,4 +210,3 @@ Example with X = 10, Y = 5, trigger = L1 change, close 18:00, forced close 18:12
   extends.
 - The API only accepts timezone-aware timestamps. The browser converts local input to
   UTC and displays times in local time.
-- Tables are created at startup with `create_all`; there are no migrations.

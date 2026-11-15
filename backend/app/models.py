@@ -73,6 +73,9 @@ class Rfq(Base):
     # event has been logged. Bid validation never looks at this column.
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     bids: Mapped[list["Bid"]] = relationship(back_populates="rfq")
     activity_logs: Mapped[list["ActivityLog"]] = relationship(back_populates="rfq")
@@ -87,7 +90,11 @@ class Supplier(Base):
 
 class Bid(Base):
     __tablename__ = "bids"
-    __table_args__ = (Index("ix_bids_rfq_supplier", "rfq_id", "supplier_id"),)
+    __table_args__ = (
+        Index("ix_bids_rfq_supplier", "rfq_id", "supplier_id"),
+        # Matches the ranking and bid history order, and the per-RFQ lowest bid.
+        Index("ix_bids_rfq_total", "rfq_id", "total_amount", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     rfq_id: Mapped[int] = mapped_column(ForeignKey("rfqs.id", ondelete="CASCADE"))

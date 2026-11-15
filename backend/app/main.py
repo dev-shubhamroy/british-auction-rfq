@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.database import Base, SessionLocal, engine
+from app.database import SessionLocal
 from app.errors import BusinessRuleError, ConflictError, NotFoundError
 from app.routes import rfqs, suppliers
 from app.services.auction_service import close_expired_auctions
@@ -34,7 +34,7 @@ async def run_closer_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(engine)
+    # Tables are created by migrations (alembic upgrade head), not at startup.
     closer = asyncio.create_task(run_closer_loop())
     yield
     closer.cancel()

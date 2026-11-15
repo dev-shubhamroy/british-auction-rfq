@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
@@ -13,7 +14,10 @@ from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 
 from app import clock  # noqa: E402
-from app.database import Base, SessionLocal, engine  # noqa: E402
+from alembic import command  # noqa: E402
+from alembic.config import Config  # noqa: E402
+
+from app.database import SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Supplier, TriggerType  # noqa: E402
 from app.schemas import BidCreate, RfqCreate  # noqa: E402
@@ -34,12 +38,22 @@ class FakeClock:
         return self.now
 
 
+ALEMBIC_INI = Path(__file__).resolve().parent.parent / "alembic.ini"
+
+
+def reset_schema():
+    with engine.begin() as conn:
+        conn.execute(text("DROP SCHEMA public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
+
+
 @pytest.fixture(scope="session", autouse=True)
 def schema():
-    Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
+    # Build the test database from the migrations, so the tests also check them.
+    reset_schema()
+    command.upgrade(Config(str(ALEMBIC_INI)), "head")
     yield
-    Base.metadata.drop_all(engine)
+    reset_schema()
 
 
 @pytest.fixture(autouse=True)

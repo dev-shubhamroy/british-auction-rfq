@@ -1,4 +1,7 @@
-"""Create demo suppliers and one live auction. Run with: python -m app.seed"""
+"""Create demo suppliers and one live auction. Run after `alembic upgrade head`:
+
+    python -m app.seed
+"""
 
 from datetime import date, timedelta
 from decimal import Decimal
@@ -6,7 +9,7 @@ from decimal import Decimal
 from sqlalchemy import select
 
 from app import clock
-from app.database import Base, SessionLocal, engine
+from app.database import SessionLocal
 from app.models import Rfq, Supplier, TriggerType
 from app.schemas import BidCreate, RfqCreate
 from app.services.auction_service import submit_bid
@@ -22,7 +25,6 @@ SUPPLIERS = [
 
 
 def seed() -> None:
-    Base.metadata.create_all(engine)
     with SessionLocal() as db:
         for name in SUPPLIERS:
             if not db.scalar(select(Supplier).where(Supplier.name == name)):

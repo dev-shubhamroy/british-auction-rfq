@@ -22,7 +22,7 @@ Design notes, the architecture diagram and the database schema are in
 
 ## Tech stack
 
-- Backend: Python 3.12, FastAPI, Pydantic, SQLAlchemy 2.0
+- Backend: Python 3.12, FastAPI, Pydantic, SQLAlchemy 2.0, Alembic
 - Database: PostgreSQL 16
 - Frontend: React, Vite, Tailwind CSS, React Router
 - Tests: pytest, run against a real PostgreSQL database
@@ -40,6 +40,7 @@ backend/
       auction_service.py   bidding, ranking, extensions, closing
       rfq_service.py       creating and reading RFQs
     seed.py           demo suppliers and a sample auction
+  migrations/         Alembic migrations
   tests/
 frontend/
   src/
@@ -92,8 +93,12 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
+alembic upgrade head
 python -m app.seed
 ```
+
+`alembic upgrade head` creates the tables. A database created by an older version of
+this project (before migrations were added) should be dropped and recreated first.
 
 Frontend:
 
@@ -133,6 +138,6 @@ API docs are at http://localhost:8000/docs.
 cd backend && source .venv/bin/activate && pytest
 ```
 
-The tests recreate the tables in the test database on each run and use a fake clock,
+The tests rebuild the test database from the migrations on each run and use a fake clock,
 so time-based rules (trigger windows, closing, forced close) are tested at exact
 timestamps.
